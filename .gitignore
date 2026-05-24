@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Production build outputs
+client/dist/
+
+# Local env files and private keys
+.env
+client/.env
+server/.env
+server/serviceAccountKey.json
+
+# IDEs, System files, and Sandbox folders
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.gemini/
+*.log
