@@ -175,7 +175,7 @@ function ManageProducts() {
               <tr>
                 <th>Product Name</th>
                 <th>Category</th>
-                <th>Price ($)</th>
+                <th>Price (LKR)</th>
                 <th>Active</th>
                 <th>Actions</th>
               </tr>
@@ -198,7 +198,7 @@ function ManageProducts() {
                       {product.category}
                     </span>
                   </td>
-                  <td style={{ fontFamily: 'var(--font-mono)' }}>${product.price}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)' }}>Rs. {product.price}</td>
                   <td>
                     <span className={`badge ${product.active ? 'badge-active' : 'badge-suspended'}`}>
                       {product.active ? 'Active' : 'Hidden'}
@@ -273,14 +273,14 @@ function ManageProducts() {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Retail Price ($)</label>
+                    <label className="form-label">Retail Price (LKR)</label>
                     <input
                       type="number"
                       name="price"
                       className="form-input"
                       value={formData.price}
                       onChange={handleInputChange}
-                      placeholder="49"
+                      placeholder="15000"
                       min={0}
                       required
                     />

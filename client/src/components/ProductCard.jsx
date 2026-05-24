@@ -18,7 +18,7 @@ function ProductCard({ product }) {
 
   // Double check our configured WhatsApp number is Sri Lankan: +94 72 013 1616
   const waNumber = '94720131616';
-  const waMessage = encodeURIComponent(`Hi, I want to buy ${name} ($${price}).`);
+  const waMessage = encodeURIComponent(`Hi, I want to buy ${name} (LKR ${price}).`);
   const waLink = `https://wa.me/${waNumber}?text=${waMessage}`;
 
   return (
@@ -40,7 +40,7 @@ function ProductCard({ product }) {
 
         <div className="product-card-footer">
           <div className="product-price">
-            <span className="currency">$</span>
+            <span className="currency" style={{ fontSize: '0.85rem', marginRight: '4px' }}>Rs.</span>
             {price}
           </div>
 
