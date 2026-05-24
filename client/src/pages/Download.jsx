@@ -58,15 +58,22 @@ function DownloadPage() {
       
       const response = await api.generateDownloadUrl(sessionToken);
       
-      // We have the signed expiring URL! Trigger standard window navigation to save it
+      // We have the download URL!
       if (response.downloadUrl) {
-        // Create an anchor tag and click it to trigger native saving
-        const link = document.createElement('a');
-        link.href = response.downloadUrl;
-        link.setAttribute('download', response.fileName || 'razz-package.zip');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const isExternal = response.downloadUrl.startsWith('http') && !response.downloadUrl.includes('firebasestorage');
+        
+        if (isExternal) {
+          // Open external links (like Google Drive) in a new tab for smooth user experience
+          window.open(response.downloadUrl, '_blank');
+        } else {
+          // Create an anchor tag and click it to trigger native saving for direct files
+          const link = document.createElement('a');
+          link.href = response.downloadUrl;
+          link.setAttribute('download', response.fileName || 'razz-package.zip');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
       } else {
         throw new Error('Download target was empty.');
       }

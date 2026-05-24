@@ -288,16 +288,16 @@ function ManageProducts() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Secure File Storage Path Reference</label>
+                  <label className="form-label">Product File Path or Google Drive Link</label>
                   <input
                     type="text"
                     name="filePath"
                     className="form-input font-mono"
                     value={formData.filePath}
                     onChange={handleInputChange}
-                    placeholder="products/panel-files/android-stealth-v2.zip"
+                    placeholder="e.g. https://drive.google.com/file/d/... or products/files/panel.zip"
                   />
-                  <span className="form-help">Enter target filename from Firebase Storage.</span>
+                  <span className="form-help">Enter a full Google Drive URL, external download link, or secure Firebase Storage path.</span>
                 </div>
 
                 <div className="form-group">

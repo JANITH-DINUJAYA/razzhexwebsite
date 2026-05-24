@@ -61,13 +61,20 @@ router.post('/generate', downloadLimiter, async (req, res) => {
     filePath = product.filePath;
     
     if (!filePath) {
-      return res.status(400).json({ error: 'Secure package file path is not configured for this product yet. Contact admin.' });
+      return res.status(400).json({ error: 'Secure package file path or download link is not configured for this product yet. Contact admin.' });
     }
 
-    fileName = filePath.split('/').pop() || 'razz-package.zip';
+    let downloadUrl = '';
+    const isExternalLink = filePath.startsWith('http://') || filePath.startsWith('https://');
 
-    // 3. Generate v4 expiring signed URL (15 mins)
-    const signedUrl = await generateSignedUrl(filePath, 15);
+    if (isExternalLink) {
+      downloadUrl = filePath;
+      fileName = filePath.includes('.zip') ? filePath.split('/').pop().split('?')[0] : 'Google_Drive_Package';
+    } else {
+      fileName = filePath.split('/').pop() || 'razz-package.zip';
+      // Generate v4 expiring signed URL (15 mins)
+      downloadUrl = await generateSignedUrl(filePath, 15);
+    }
 
     // 4. Log download entry in Firestore
     await db.collection('downloads').add({
@@ -80,7 +87,7 @@ router.post('/generate', downloadLimiter, async (req, res) => {
 
     // 5. Respond with URL and parameters
     res.status(200).json({
-      downloadUrl: signedUrl,
+      downloadUrl,
       fileName,
       expiresIn: 900 // 15 mins in seconds
     });
