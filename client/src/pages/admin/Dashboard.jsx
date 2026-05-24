@@ -83,7 +83,7 @@ function Dashboard() {
             <DollarSign size={24} />
           </div>
           <div>
-            <div className="stat-value">${stats.revenue}</div>
+            <div className="stat-value">Rs. {stats.revenue}</div>
             <div className="stat-label">Estimated Revenue</div>
           </div>
         </GlassCard>
