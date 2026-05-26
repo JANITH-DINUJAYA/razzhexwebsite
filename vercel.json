@@ -31,6 +31,10 @@
       "dest": "client/favicon.svg"
     },
     {
+  "src": "/logo.png",
+  "dest": "client/public/logo.png"
+},
+    {
       "src": "/((?!api/).*)",
       "dest": "client/index.html"
     }
