@@ -35,17 +35,7 @@ function Navbar() {
       <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
         <div className="navbar-inner">
           <Link to="/" className="navbar-logo" onClick={closeMenu}>
-            <div className="logo-icon" style={{ background: 'none', padding: 0, overflow: 'hidden', boxShadow: 'var(--shadow-glow-blue)' }}>
-              <img
-  src="/logo.png"
-  alt="RAAZZ HEX"
-  style={{
-    width: '100%',
-    height: '100%',
-    objectFit: 'contain'
-  }}
-/>
-            </div>
+            <img src="/logo.png" alt="RAAZZ HEX" />
             <span className="logo-text">RAAZZ HEX</span>
           </Link>
 
