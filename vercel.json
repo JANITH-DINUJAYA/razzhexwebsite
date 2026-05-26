@@ -19,21 +19,8 @@
       "dest": "server/server.js"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "client/assets/$1"
+      "handle": "filesystem"
     },
-    {
-      "src": "/images/(.*)",
-      "dest": "client/images/$1"
-    },
-    {
-      "src": "/favicon.svg",
-      "dest": "client/favicon.svg"
-    },
-    {
-  "src": "/logo.png",
-  "dest": "client/public/logo.png"
-},
     {
       "src": "/((?!api/).*)",
       "dest": "client/index.html"
