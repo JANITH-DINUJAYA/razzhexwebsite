@@ -7,7 +7,7 @@ function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <div className="logo-text">RAAZZ-HEX</div>
+          <div className="logo-text">RAAZZ HEX</div>
           <p>
             Premium, high-performance digital products and gaming utilities engineered for maximum reliability, speed, and safety.
           </p>
@@ -36,7 +36,7 @@ function Footer() {
       </div>
 
       <div className="footer-bottom">
-        <div>&copy; 2026 Raazz-Hex. All rights reserved.</div>
+        <div>&copy; 2026 Raazz Hex. All rights reserved.</div>
         <div>Premium Digital Products &amp; Tools</div>
       </div>
     </footer>

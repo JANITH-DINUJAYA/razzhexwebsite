@@ -15,7 +15,7 @@ function Home() {
           </div>
 
           <h1 className="animate-in stagger-1">
-            RAAZZ-<span className="text-gradient text-glow">HEX</span>
+            RAAZZ <span className="text-gradient text-glow">HEX</span>
           </h1>
 
           <p className="hero-subtitle animate-in stagger-2">
@@ -42,7 +42,7 @@ function Home() {
       <section className="section" style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-glass)' }}>
         <div className="container">
           <h2 className="text-center animate-in" style={{ marginBottom: '40px' }}>
-            Why Choose <span className="text-gradient">RAAZZ-HEX</span>?
+            Why Choose <span className="text-gradient">RAAZZ HEX</span>?
           </h2>
 
           <div className="features-grid">

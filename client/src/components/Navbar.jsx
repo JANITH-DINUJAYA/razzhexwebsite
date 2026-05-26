@@ -36,7 +36,7 @@ function Navbar() {
         <div className="navbar-inner">
           <Link to="/" className="navbar-logo" onClick={closeMenu}>
             <div className="logo-icon">R</div>
-            <span className="logo-text">RAAZZ-HEX</span>
+            <span className="logo-text">RAAZZ HEX</span>
           </Link>
 
           <ul className="navbar-links">
