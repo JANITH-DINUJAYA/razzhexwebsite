@@ -37,7 +37,7 @@ function Navbar() {
           <Link to="/" className="navbar-logo" onClick={closeMenu}>
             <div className="logo-icon" style={{ background: 'none', padding: 0, overflow: 'hidden', boxShadow: 'var(--shadow-glow-blue)' }}>
               <img
-  src="/logo.jpeg"
+  src="/logo.png"
   alt="RAAZZ HEX"
   style={{
     width: '100%',
