@@ -49,6 +49,11 @@ export const api = {
     });
   },
 
+  // Get free download url
+  getFreeDownloadUrl: async (productId) => {
+    return request(`/api/downloads/free/${productId}`);
+  },
+
   // Admin stats
   getAdminStats: async (token) => {
     return request('/api/admin/stats', {

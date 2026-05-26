@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import CategoryFilter from '../components/CategoryFilter';
 import ProductCard from '../components/ProductCard';
 import api from '../utils/api';
@@ -10,15 +11,17 @@ const MOCK_PRODUCTS = [
   { id: '3', name: 'iOS MDM Controller', description: 'Mobile device configuration profiles manager to deploy system parameters, lock devices, and push policies.', price: 79, category: 'iOS Panel', imageUrl: null },
   { id: '4', name: 'iOS Push Manager', description: 'Advanced Apple Push Notification service dashboard with custom payloads, segmentation, and batch delivery.', price: 45, category: 'iOS Panel', imageUrl: null },
   { id: '5', name: 'PC Remote Admin', description: 'Extremely fast desktop streaming framework with encrypted command shells, processes managers, and file systems.', price: 59, category: 'PC Panel', imageUrl: null },
-  { id: '6', name: 'PC Network Monitor', description: 'Real-time PC network interface analyzer with packet capture, bandwidth graphs, and suspicious IP triggers.', price: 39, category: 'PC Panel', imageUrl: null }
+  { id: '6', name: 'PC Network Monitor', description: 'Real-time PC network interface analyzer with packet capture, bandwidth graphs, and suspicious IP triggers.', price: 39, category: 'PC Panel', imageUrl: null },
+  { id: '7', name: 'Free Bypass Payload', description: 'Lightweight free panel to bypass standard device verification and test local communication protocols.', price: 0, category: 'Free Panel', imageUrl: null }
 ];
 
 function Products() {
   const [products, setProducts] = useState(MOCK_PRODUCTS);
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
-  const categories = ['All', 'Android Panel', 'iOS Panel', 'PC Panel'];
+  const categories = ['All', 'Android Panel', 'iOS Panel', 'PC Panel', 'Free Panel'];
 
   useEffect(() => {
     async function loadProducts() {
@@ -38,6 +41,14 @@ function Products() {
     }
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const catParam = params.get('category');
+    if (catParam) {
+      setActiveCategory(catParam);
+    }
+  }, [location]);
 
   const filteredProducts = activeCategory === 'All'
     ? products

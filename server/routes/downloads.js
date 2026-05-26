@@ -11,6 +11,62 @@ const { generateSignedUrl } = require('../utils/signedUrl');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'razz-hex-deepmind-masterkey';
 
+// GET /api/downloads/free/:productId — Unauthenticated download link generator for Free Panels
+router.get('/free/:productId', async (req, res) => {
+  const { productId } = req.params;
+
+  try {
+    let filePath = '';
+    let fileName = 'razz-free-package.zip';
+
+    if (!isConfigured) {
+      console.log('[FREE DOWNLOAD BYPASS] Backend offline. Providing mock free asset stream.');
+      // Resolve mock details
+      filePath = 'products/panel-files/free-panel-mock.zip';
+      const signedUrl = await generateSignedUrl(filePath, 15);
+      return res.status(200).json({ downloadUrl: signedUrl, fileName: 'free-panel-mock.zip' });
+    }
+
+    const productDoc = await db.collection('products').doc(productId).get();
+    if (!productDoc.exists) {
+      return res.status(404).json({ error: 'Product catalog profile not found.' });
+    }
+
+    const product = productDoc.data();
+    
+    // Security check: ensure it is a Free Panel
+    if (product.category !== 'Free Panel' && product.price !== 0) {
+      return res.status(403).json({ error: 'This product is not free.' });
+    }
+
+    filePath = product.filePath;
+    
+    if (!filePath) {
+      return res.status(400).json({ error: 'No secure file path configured for this product yet. Contact admin.' });
+    }
+
+    let downloadUrl = '';
+    const isExternalLink = filePath.startsWith('http://') || filePath.startsWith('https://');
+
+    if (isExternalLink) {
+      downloadUrl = filePath;
+      fileName = filePath.includes('.zip') ? filePath.split('/').pop().split('?')[0] : 'Free_Panel_Package';
+    } else {
+      fileName = filePath.split('/').pop() || 'free-package.zip';
+      // Generate expiring signed URL (15 mins)
+      downloadUrl = await generateSignedUrl(filePath, 15);
+    }
+
+    res.status(200).json({
+      downloadUrl,
+      fileName
+    });
+  } catch (error) {
+    console.error('[FREE DOWNLOAD] Generation failed:', error);
+    res.status(500).json({ error: 'Server error generating download link for free panel.' });
+  }
+});
+
 // POST /api/downloads/generate — Protected signed download endpoint (uses downloadLimiter)
 router.post('/generate', downloadLimiter, async (req, res) => {
   const authHeader = req.headers.authorization;

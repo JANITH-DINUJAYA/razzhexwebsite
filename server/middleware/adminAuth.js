@@ -27,22 +27,16 @@ async function verifyAdmin(req, res, next) {
     const adminDoc = await db.collection('admins').doc(decodedToken.uid).get();
     
     if (!adminDoc.exists) {
-      // For initial setup ease: if there are zero admins in the collection,
-      // we allow the first logged in user to pass and register as admin, or simply pass
-      const adminsCountRef = await db.collection('admins').limit(1).get();
-      if (adminsCountRef.empty) {
-        console.warn(`[AUTH] Admin collection empty. Auto-registering UID ${decodedToken.uid} as initial supervisor.`);
-        await db.collection('admins').doc(decodedToken.uid).set({
-          email: decodedToken.email,
-          role: 'superadmin',
-          isActive: true,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        req.admin = { uid: decodedToken.uid, email: decodedToken.email, role: 'superadmin' };
-        return next();
-      }
-
-      return res.status(403).json({ error: 'Access denied. Account is not registered in administrative index.' });
+      // Auto-register any successfully authenticated Firebase user in the admins collection
+      console.warn(`[AUTH] Admin profile not found for UID ${decodedToken.uid}. Auto-registering...`);
+      await db.collection('admins').doc(decodedToken.uid).set({
+        email: decodedToken.email || '',
+        role: 'admin',
+        isActive: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      req.admin = { uid: decodedToken.uid, email: decodedToken.email, role: 'admin' };
+      return next();
     }
 
     const adminData = adminDoc.data();

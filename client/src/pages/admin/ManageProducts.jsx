@@ -30,7 +30,8 @@ function ManageProducts() {
     { id: '3', name: 'iOS MDM Controller', category: 'iOS Panel', price: 79, active: true, description: 'Mobile device management solution.' },
     { id: '4', name: 'iOS Push Manager', category: 'iOS Panel', price: 45, active: true, description: 'Push notification management system.' },
     { id: '5', name: 'PC Remote Admin', category: 'PC Panel', price: 59, active: true, description: 'Remote desktop administration tool.' },
-    { id: '6', name: 'PC Network Monitor', category: 'PC Panel', price: 39, active: true, description: 'Real-time network traffic monitoring.' }
+    { id: '6', name: 'PC Network Monitor', category: 'PC Panel', price: 39, active: true, description: 'Real-time network traffic monitoring.' },
+    { id: '7', name: 'Free Bypass Payload', category: 'Free Panel', price: 0, active: true, description: 'Lightweight free panel helper.' }
   ];
 
   useEffect(() => {
@@ -191,6 +192,8 @@ function ManageProducts() {
                           ? 'badge-active' 
                           : product.category.includes('iOS') 
                           ? 'badge-active' 
+                          : product.category.includes('Free')
+                          ? 'badge-free'
                           : 'badge-revoked'
                       }`}
                       style={{ fontSize: '0.75rem' }}
@@ -269,6 +272,7 @@ function ManageProducts() {
                       <option value="Android Panel">Android Panel</option>
                       <option value="iOS Panel">iOS Panel</option>
                       <option value="PC Panel">PC Panel</option>
+                      <option value="Free Panel">Free Panel</option>
                     </select>
                   </div>
 

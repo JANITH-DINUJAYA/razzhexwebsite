@@ -957,6 +957,7 @@ h4 { font-size: 1.25rem; }
 .badge-android { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.25); }
 .badge-ios { background: rgba(59,130,246,0.15); color: var(--info); border: 1px solid rgba(59,130,246,0.25); }
 .badge-pc { background: rgba(139,92,246,0.15); color: var(--neon-purple); border: 1px solid rgba(139,92,246,0.25); }
+.badge-free { background: rgba(236, 72, 153, 0.15); color: var(--neon-pink); border: 1px solid rgba(236, 72, 153, 0.25); }
 
 .product-card-body {
   padding: var(--space-6);

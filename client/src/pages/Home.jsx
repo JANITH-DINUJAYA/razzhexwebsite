@@ -35,6 +35,24 @@ function Home() {
               <MessageSquareCode size={18} className="text-accent" /> Contact WhatsApp
             </a>
           </div>
+
+          <div className="animate-in stagger-4" style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+            <Link 
+              to="/products?category=Free Panel" 
+              className="btn btn-secondary btn-lg"
+              style={{
+                borderColor: 'var(--neon-pink)',
+                color: 'var(--neon-pink)',
+                boxShadow: '0 0 15px rgba(236, 72, 153, 0.15)',
+                textShadow: '0 0 10px rgba(236, 72, 153, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Zap size={18} /> Free Panels <ArrowRight size={18} />
+            </Link>
+          </div>
         </div>
       </section>
 
