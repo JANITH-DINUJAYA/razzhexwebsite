@@ -53,9 +53,7 @@ function Footer() {
           <a href="https://wa.me/94720131616" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MessageSquareCode size={16} /> WhatsApp Admin
           </a>
-          <a href="mailto:support@razzhex.com" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Send size={16} /> Email Support
-          </a>
+          
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)' }}>
             <Shield size={16} className="text-accent" /> Secure License Validation
           </div>
