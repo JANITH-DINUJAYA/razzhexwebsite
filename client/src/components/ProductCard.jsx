@@ -24,7 +24,7 @@ function ProductCard({ product }) {
   const isFree = category.toLowerCase().includes('free') || price === 0;
 
   // Double check our configured WhatsApp number is Sri Lankan: +94 72 013 1616
-  const waNumber = '94720131616';
+  const waNumber = '94787148687';
   const waMessage = encodeURIComponent(`Hi, I want to buy ${name} (LKR ${price}).`);
   const waLink = `https://wa.me/${waNumber}?text=${waMessage}`;
 
