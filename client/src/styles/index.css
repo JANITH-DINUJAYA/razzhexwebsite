@@ -347,6 +347,12 @@ h4 { font-size: 1.25rem; }
   overflow: visible;
 }
 
+.navbar-logo .logo-text {
+  background: var(--gradient-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
 .navbar-links {
   display: flex;
