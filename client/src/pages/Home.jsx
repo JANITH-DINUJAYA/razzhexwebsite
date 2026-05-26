@@ -15,7 +15,7 @@ function Home() {
           </div>
 
           <h1 className="animate-in stagger-1">
-            Razz <span className="text-gradient text-glow">Hex</span>
+            RAAZZ-<span className="text-gradient text-glow">Hex</span>
           </h1>
 
           <p className="hero-subtitle animate-in stagger-2">
