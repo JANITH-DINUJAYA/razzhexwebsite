@@ -42,7 +42,7 @@ function Home() {
       <section className="section" style={{ background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-glass)' }}>
         <div className="container">
           <h2 className="text-center animate-in" style={{ marginBottom: '40px' }}>
-            Why Choose <span className="text-gradient">Razz Hex</span>?
+            Why Choose <span className="text-gradient">RAAZZ-HEX</span>?
           </h2>
 
           <div className="features-grid">
