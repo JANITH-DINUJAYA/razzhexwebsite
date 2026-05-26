@@ -50,7 +50,7 @@ function Footer() {
           <a href="tel:0787148687" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: '600' }}>
             <Phone size={16} className="text-accent" /> 0787148687
           </a>
-          <a href="https://wa.me/94720131616" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <a href="https://wa.me/94787148687" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MessageSquareCode size={16} /> WhatsApp Admin
           </a>
           
