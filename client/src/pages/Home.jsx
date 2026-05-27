@@ -27,7 +27,7 @@ function Home() {
               View Products <ArrowRight size={18} />
             </Link>
             <a
-              href="https://wa.me/94720131616"
+              href="https://wa.me/94787148687"
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary btn-lg"
