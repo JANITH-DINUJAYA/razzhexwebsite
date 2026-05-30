@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, X, AlertCircle, Link, RotateCcw } from 'lucide-react';
 import AdminLayout from '../../components/AdminLayout';
 import GlassCard from '../../components/GlassCard';
 import api from '../../utils/api';
@@ -10,8 +10,8 @@ function ManageProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editProduct, setEditProduct] = useState(null); // null means adding a new product
-  
+  const [editProduct, setEditProduct] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -21,17 +21,20 @@ function ManageProducts() {
     imageUrl: '',
     active: true
   });
+
+  // Tracks whether admin explicitly wants to update the filePath during an edit
+  const [updateFilePath, setUpdateFilePath] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Pre-load default values for offline fallback testing
   const MOCK_PRODUCTS = [
-    { id: '1', name: 'Android RAT Panel', category: 'Android Panel', price: 49, active: true, description: 'Advanced remote administration tool for Android devices.' },
-    { id: '2', name: 'Android SMS Gateway', category: 'Android Panel', price: 35, active: true, description: 'Bulk SMS management system.' },
-    { id: '3', name: 'iOS MDM Controller', category: 'iOS Panel', price: 79, active: true, description: 'Mobile device management solution.' },
-    { id: '4', name: 'iOS Push Manager', category: 'iOS Panel', price: 45, active: true, description: 'Push notification management system.' },
-    { id: '5', name: 'PC Remote Admin', category: 'PC Panel', price: 59, active: true, description: 'Remote desktop administration tool.' },
-    { id: '6', name: 'PC Network Monitor', category: 'PC Panel', price: 39, active: true, description: 'Real-time network traffic monitoring.' },
-    { id: '7', name: 'Free Bypass Payload', category: 'Free Panel', price: 0, active: true, description: 'Lightweight free panel helper.' }
+    { id: '1', name: 'Android RAT Panel', category: 'Android Panel', price: 49, active: true, description: 'Advanced remote administration tool for Android devices.', filePath: '' },
+    { id: '2', name: 'Android SMS Gateway', category: 'Android Panel', price: 35, active: true, description: 'Bulk SMS management system.', filePath: '' },
+    { id: '3', name: 'iOS MDM Controller', category: 'iOS Panel', price: 79, active: true, description: 'Mobile device management solution.', filePath: '' },
+    { id: '4', name: 'iOS Push Manager', category: 'iOS Panel', price: 45, active: true, description: 'Push notification management system.', filePath: '' },
+    { id: '5', name: 'PC Remote Admin', category: 'PC Panel', price: 59, active: true, description: 'Remote desktop administration tool.', filePath: '' },
+    { id: '6', name: 'PC Network Monitor', category: 'PC Panel', price: 39, active: true, description: 'Real-time network traffic monitoring.', filePath: '' },
+    { id: '7', name: 'Free Bypass Payload', category: 'Free Panel', price: 0, active: true, description: 'Lightweight free panel helper.', filePath: '' }
   ];
 
   useEffect(() => {
@@ -53,6 +56,7 @@ function ManageProducts() {
 
   const openAddModal = () => {
     setEditProduct(null);
+    setUpdateFilePath(false);
     setFormData({
       name: '',
       description: '',
@@ -68,6 +72,7 @@ function ManageProducts() {
 
   const openEditModal = (product) => {
     setEditProduct(product);
+    setUpdateFilePath(false); // Default: preserve existing filePath
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -93,32 +98,55 @@ function ManageProducts() {
     e.preventDefault();
     setErrorMessage('');
 
-    if (!formData.name || !formData.price) {
+    if (!formData.name || formData.price === '') {
       setErrorMessage('Name and price are mandatory fields.');
       return;
     }
 
     try {
       if (editProduct) {
-        // Edit flow
+        // Build the update payload
+        // Only include filePath in the payload if admin explicitly opted to update it
+        const updatePayload = {
+          name: formData.name,
+          description: formData.description,
+          category: formData.category,
+          price: Number(formData.price),
+          imageUrl: formData.imageUrl || null,
+          active: formData.active,
+        };
+
+        if (updateFilePath) {
+          // Admin wants to update the link (even if they set it to empty to clear it)
+          updatePayload.filePath = formData.filePath;
+        }
+        // If updateFilePath is false, filePath is NOT sent → backend preserves existing value
+
         try {
-          await api.adminUpdateProduct(token, editProduct.id, {
-            ...formData,
-            price: Number(formData.price)
-          });
+          await api.adminUpdateProduct(token, editProduct.id, updatePayload);
         } catch (err) {
-          // If server fails, update locally for frontend-only capability checks
           console.warn('Backend update failed, performing local operation.', err);
         }
-        
-        setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...p, ...formData, price: Number(formData.price) } : p));
+
+        setProducts(prev =>
+          prev.map(p =>
+            p.id === editProduct.id
+              ? {
+                  ...p,
+                  ...updatePayload,
+                  // Keep the old filePath locally if we didn't update it
+                  filePath: updateFilePath ? formData.filePath : p.filePath
+                }
+              : p
+          )
+        );
       } else {
-        // Create flow
+        // Create flow — filePath is always included for new products
         const newProductData = {
           ...formData,
           price: Number(formData.price)
         };
-        
+
         let createdProduct = {
           id: Math.random().toString(36).substring(2, 9),
           ...newProductData
@@ -141,7 +169,7 @@ function ManageProducts() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
-    
+
     try {
       try {
         await api.adminDeleteProduct(token, id);
@@ -177,6 +205,7 @@ function ManageProducts() {
                 <th>Product Name</th>
                 <th>Category</th>
                 <th>Price (LKR)</th>
+                <th>File Link</th>
                 <th>Active</th>
                 <th>Actions</th>
               </tr>
@@ -186,12 +215,12 @@ function ManageProducts() {
                 <tr key={product.id}>
                   <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{product.name}</td>
                   <td>
-                    <span 
+                    <span
                       className={`badge ${
-                        product.category.includes('Android') 
-                          ? 'badge-active' 
-                          : product.category.includes('iOS') 
-                          ? 'badge-active' 
+                        product.category.includes('Android')
+                          ? 'badge-active'
+                          : product.category.includes('iOS')
+                          ? 'badge-active'
                           : product.category.includes('Free')
                           ? 'badge-free'
                           : 'badge-revoked'
@@ -202,6 +231,27 @@ function ManageProducts() {
                     </span>
                   </td>
                   <td style={{ fontFamily: 'var(--font-mono)' }}>Rs. {product.price}</td>
+                  <td>
+                    {product.filePath ? (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: 'var(--neon-blue)',
+                          fontSize: '0.75rem',
+                          fontFamily: 'var(--font-mono)'
+                        }}
+                      >
+                        <Link size={12} />
+                        {product.filePath.length > 30
+                          ? product.filePath.substring(0, 30) + '…'
+                          : product.filePath}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>—</span>
+                    )}
+                  </td>
                   <td>
                     <span className={`badge ${product.active ? 'badge-active' : 'badge-suspended'}`}>
                       {product.active ? 'Active' : 'Hidden'}
@@ -291,18 +341,76 @@ function ManageProducts() {
                   </div>
                 </div>
 
+                {/* ─── FILE PATH SECTION ─── */}
                 <div className="form-group">
-                  <label className="form-label">Product File Path or Google Drive Link</label>
-                  <input
-                    type="text"
-                    name="filePath"
-                    className="form-input font-mono"
-                    value={formData.filePath}
-                    onChange={handleInputChange}
-                    placeholder="e.g. https://drive.google.com/file/d/... or products/files/panel.zip"
-                  />
-                  <span className="form-help">Enter a full Google Drive URL, external download link, or secure Firebase Storage path.</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label className="form-label" style={{ margin: 0 }}>
+                      Product File Path or Google Drive Link
+                    </label>
+
+                    {/* Only show the toggle when editing an existing product */}
+                    {editProduct && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          fontSize: '0.78rem',
+                          color: updateFilePath ? 'var(--neon-blue)' : 'var(--text-muted)'
+                        }}
+                        onClick={() => setUpdateFilePath(v => !v)}
+                      >
+                        <RotateCcw size={12} />
+                        {updateFilePath ? 'Updating link' : 'Keep existing link'}
+                      </div>
+                    )}
+                  </div>
+
+                  {editProduct && !updateFilePath ? (
+                    // Read-only display of current link when not updating
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-muted, rgba(255,255,255,0.04))',
+                        border: '1px solid var(--border-subtle)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <Link size={13} style={{ flexShrink: 0, opacity: 0.5 }} />
+                      <span style={{ wordBreak: 'break-all' }}>
+                        {editProduct.filePath || 'No file link saved'}
+                      </span>
+                    </div>
+                  ) : (
+                    // Editable input — always shown for new products, toggled for edits
+                    <>
+                      <input
+                        type="text"
+                        name="filePath"
+                        className="form-input font-mono"
+                        value={formData.filePath}
+                        onChange={handleInputChange}
+                        placeholder="e.g. https://drive.google.com/file/d/... or products/files/panel.zip"
+                        autoFocus={editProduct && updateFilePath}
+                      />
+                      <span className="form-help">
+                        Enter a full Google Drive URL, external download link, or secure Firebase Storage path.
+                        {editProduct && (
+                          <> The previous link will be <strong>replaced</strong> once you save.</>
+                        )}
+                      </span>
+                    </>
+                  )}
                 </div>
+                {/* ─── END FILE PATH SECTION ─── */}
 
                 <div className="form-group">
                   <label className="form-label">Product Image URL (Optional)</label>

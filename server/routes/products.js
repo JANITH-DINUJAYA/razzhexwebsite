@@ -26,7 +26,6 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    // Check if products collection is completely empty. If so, seed initial products.
     const checkEmptySnapshot = await db.collection('products').limit(1).get();
     if (checkEmptySnapshot.empty) {
       console.log('[PRODUCTS] Firestore products collection is empty. Seeding initial catalog...');
@@ -52,11 +51,9 @@ router.get('/', async (req, res) => {
     snapshot.forEach(doc => {
       list.push({ id: doc.id, ...doc.data() });
     });
-    
-    // Sort in memory by createdAt descending to avoid composite index requirements
+
     list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
-    // Return DB or fallback list if empty
+
     res.status(200).json(list.length > 0 ? list : localProducts.filter(p => p.active));
   } catch (error) {
     console.error('[PRODUCTS] Fetch error:', error);
@@ -100,20 +97,38 @@ router.post('/', verifyAdmin, async (req, res) => {
 });
 
 // 3. PUT /api/products/:id — Modify product record (Admin privilege)
+//
+// filePath update behaviour:
+//   - If the request body includes a "filePath" key (even an empty string),
+//     the value is written to Firestore — the admin explicitly wants to change it.
+//   - If the request body does NOT include "filePath" at all (key is undefined),
+//     the field is left untouched in Firestore — preserving the existing link.
+//
+// The frontend only sends "filePath" when the admin toggles "Updating link" in the UI.
 router.put('/:id', verifyAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, description, category, price, filePath, active, imageUrl } = req.body;
 
+  // Build payload with only the fields that were actually sent
   const payload = {
-    name,
-    description,
-    category,
-    price: Number(price),
-    filePath,
-    imageUrl: imageUrl || null,
-    active,
     updatedAt: new Date().toISOString()
   };
+
+  if (name !== undefined)        payload.name        = name;
+  if (description !== undefined) payload.description = description;
+  if (category !== undefined)    payload.category    = category;
+  if (price !== undefined)       payload.price       = Number(price);
+  if (active !== undefined)      payload.active      = active;
+  if (imageUrl !== undefined)    payload.imageUrl    = imageUrl || null;
+
+  // filePath is only added to the payload when the frontend explicitly sends it.
+  // This prevents accidental erasure when the admin saves without touching the link field.
+  if (filePath !== undefined) {
+    payload.filePath = filePath; // could be '' if admin intentionally cleared it
+    console.log(`[PRODUCTS] filePath update requested for product ${id}: "${filePath}"`);
+  } else {
+    console.log(`[PRODUCTS] filePath NOT in request for product ${id} — preserving existing value.`);
+  }
 
   if (!isConfigured) {
     const idx = localProducts.findIndex(p => p.id === id);
@@ -129,6 +144,8 @@ router.put('/:id', verifyAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Product profile not found.' });
     }
 
+    // Firestore .update() only touches fields present in payload — existing
+    // fields not in payload (including filePath when not sent) are untouched.
     await docRef.update(payload);
     res.status(200).json({ id, ...payload });
   } catch (error) {
