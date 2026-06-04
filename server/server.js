@@ -29,21 +29,60 @@ const allowedOrigins = (() => {
   const base = ['http://localhost:3000', 'http://127.0.0.1:3000'];
   if (process.env.ALLOWED_ORIGINS) {
     const extra = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean);
-    return [...base, ...extra];
+    base.push(...extra);
+  }
+  if (process.env.VERCEL_URL) {
+    base.push(`https://${process.env.VERCEL_URL}`);
   }
   return base;
 })();
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS: Origin ${origin} not permitted.`));
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+const corsOptionsDelegate = (req, callback) => {
+  const origin = req.header('Origin');
+  let isAllowed = false;
+
+  if (!origin) {
+    isAllowed = true;
+  } else {
+    // 1. Check against the explicit allowed origins array
+    if (allowedOrigins.includes(origin)) {
+      isAllowed = true;
+    } else {
+      // 2. Check if same-origin request
+      const host = req.header('host');
+      const forwardedHost = req.header('x-forwarded-host');
+      try {
+        const originHost = new URL(origin).host;
+        if (originHost === host || (forwardedHost && originHost === forwardedHost)) {
+          isAllowed = true;
+        }
+      } catch (e) {
+        // Ignore malformed URL errors
+      }
+    }
+
+    // 3. Match Vercel project deployment domains (production & previews)
+    if (!isAllowed) {
+      const matchVercelPattern = /^https:\/\/razzhexwebsite(-.*)?\.vercel\.app$/i.test(origin);
+      if (matchVercelPattern) {
+        isAllowed = true;
+      }
+    }
+  }
+
+  if (isAllowed) {
+    callback(null, {
+      origin: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true
+    });
+  } else {
+    callback(new Error(`CORS: Origin ${origin} not permitted.`));
+  }
+};
+
+app.use(cors(corsOptionsDelegate));
 
 // Body parsing
 app.use(express.json());
