@@ -82,14 +82,41 @@ router.post('/validate', licenseLimiter, async (req, res) => {
     // ----------------------------------------------------
     // Strict Transaction lock verifying 1 device parameters
     // ----------------------------------------------------
-    const licenseRefQuery = await db.collection('licenses')
+    console.log(`[LICENSE] Validating licenseKey: "${licenseKey}" (Hash: ${incomingHash})`);
+
+    let licenseRefQuery = await db.collection('licenses')
       .where('keyHash', '==', incomingHash)
       .limit(1)
       .get();
 
+    // Fallback: Query by plain-text key if hash lookup returns empty (e.g., manually created database entries)
     if (licenseRefQuery.empty) {
+      const sanitizedKey = licenseKey.trim().toUpperCase();
+      console.log(`[LICENSE] No keyHash match. Trying plain-text fallback: "${sanitizedKey}"`);
+      
+      licenseRefQuery = await db.collection('licenses')
+        .where('key', '==', sanitizedKey)
+        .limit(1)
+        .get();
+
+      // Additional fallback: Query without dashes
+      if (licenseRefQuery.empty) {
+        const cleanKey = sanitizedKey.replace(/-/g, '');
+        console.log(`[LICENSE] No plain-text match with dashes. Trying without dashes: "${cleanKey}"`);
+        
+        licenseRefQuery = await db.collection('licenses')
+          .where('key', '==', cleanKey)
+          .limit(1)
+          .get();
+      }
+    }
+
+    if (licenseRefQuery.empty) {
+      console.warn(`[LICENSE] Verification failed. License key "${licenseKey}" not found in Firestore.`);
       return res.status(403).json({ error: 'License key invalid. Document not found.' });
     }
+
+    console.log(`[LICENSE] License document found successfully.`);
 
     const docId = licenseRefQuery.docs[0].id;
     const licenseRef = db.collection('licenses').doc(docId);
