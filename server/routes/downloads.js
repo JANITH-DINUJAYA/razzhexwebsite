@@ -151,6 +151,9 @@ router.post('/generate', downloadLimiter, async (req, res) => {
   } catch (error) {
     console.error('[DOWNLOAD] Generation collapsed:', error);
     
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Session expired. Please re-verify your license key to continue.' });
+    }
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ error: 'Download authorization expired or session signature corrupt. Verify license again.' });
     }

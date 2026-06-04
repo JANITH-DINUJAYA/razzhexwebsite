@@ -25,8 +25,21 @@ app.use(helmet({
   contentSecurityPolicy: false, // Turn off CSP constraints in dev environments to load styles comfortably
 }));
 
+const allowedOrigins = (() => {
+  const base = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+  if (process.env.ALLOWED_ORIGINS) {
+    const extra = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean);
+    return [...base, ...extra];
+  }
+  return base;
+})();
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS: Origin ${origin} not permitted.`));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

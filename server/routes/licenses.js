@@ -127,16 +127,19 @@ router.post('/validate', licenseLimiter, async (req, res) => {
       if (index === -1) {
         // Device is new, verify maximum restrictions (default limit = 1)
         const limit = lic.maxDevices || 1;
-        const currentCount = lic.activatedDevices || 0;
+        // Use actual fingerprint array length as source of truth (not the stored counter
+        // which can get out-of-sync with the real registered device list)
+        const currentCount = devices.length;
 
         if (currentCount >= limit) {
           throw new Error('DEVICE_LIMIT_REACHED');
         }
 
-        // Register device, increment counters in Firestore atomically
+        // Register device, sync counters in Firestore atomically
+        // Set activatedDevices explicitly to keep it in sync with actual array length
         transaction.update(licenseRef, {
           deviceFingerprints: admin.firestore.FieldValue.arrayUnion(deviceFingerprint),
-          activatedDevices: admin.firestore.FieldValue.increment(1),
+          activatedDevices: devices.length + 1,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
