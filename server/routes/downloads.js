@@ -60,53 +60,33 @@ async function getGoogleDriveStream(fileId) {
   return response;
 }
 
-// Securely stream files from Firebase Storage or external URLs to hide the download endpoint
-async function streamFile(downloadUrl, fileName, res) {
+// Securely redirect to direct download URL (handles Google Drive, Dropbox, Firebase Storage, and Mega)
+async function handleDownloadRedirect(downloadUrl, res) {
   try {
     const isExternal = downloadUrl.startsWith('http://') || downloadUrl.startsWith('https://');
     
     if (isExternal) {
       if (downloadUrl.includes('mega.nz')) {
-        console.log(`[STREAM] Mega URL detected, redirecting: ${downloadUrl}`);
+        console.log(`[REDIRECT] Mega URL detected, redirecting: ${downloadUrl}`);
         return res.redirect(downloadUrl);
       }
       
-      const driveMatch = downloadUrl.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=))([a-zA-Z0-9_-]+)/);
-      let response;
-      if (driveMatch) {
-        console.log(`[STREAM] Google Drive URL detected: ${downloadUrl}`);
-        response = await getGoogleDriveStream(driveMatch[1]);
-      } else {
-        const directUrl = getDirectDownloadUrl(downloadUrl);
-        console.log(`[STREAM] Streaming external URL: ${directUrl}`);
-        response = await axios({
-          method: 'get',
-          url: directUrl,
-          responseType: 'stream',
-          timeout: 30000
-        });
-      }
-      
-      res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
-      if (response.headers['content-length']) {
-        res.setHeader('Content-Length', response.headers['content-length']);
-      }
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      response.data.pipe(res);
+      const directUrl = getDirectDownloadUrl(downloadUrl);
+      console.log(`[REDIRECT] Redirecting to direct URL: ${directUrl}`);
+      return res.redirect(directUrl);
     } else {
-      console.log(`[STREAM] Streaming Firebase Storage file: ${downloadUrl}`);
-      const fileRef = bucket.file(downloadUrl);
-      const [metadata] = await fileRef.getMetadata();
-      
-      res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
-      res.setHeader('Content-Length', metadata.size);
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      
-      fileRef.createReadStream().pipe(res);
+      if (!isConfigured) {
+        console.log(`[REDIRECT BYPASS] Backend offline. Redirecting to dummy mock zip file.`);
+        return res.redirect('https://file-examples.com/wp-content/uploads/2017/02/zip_2MB.zip');
+      }
+
+      console.log(`[REDIRECT] Generating signed URL for Firebase Storage: ${downloadUrl}`);
+      const signedUrl = await generateSignedUrl(downloadUrl, 15);
+      return res.redirect(signedUrl);
     }
   } catch (error) {
-    console.error('[STREAM ERROR] Streaming failed, falling back to redirect:', error);
-    res.redirect(downloadUrl);
+    console.error('[REDIRECT ERROR] Redirect failed:', error);
+    return res.redirect(downloadUrl);
   }
 }
 
@@ -342,7 +322,7 @@ router.get('/file', async (req, res) => {
         fileName = 'stealth-package.zip';
       }
       
-      return streamFile(downloadUrl, fileName, res);
+      return handleDownloadRedirect(downloadUrl, res);
     }
 
     const productDoc = await db.collection('products').doc(productId).get();
@@ -386,7 +366,7 @@ router.get('/file', async (req, res) => {
       downloadedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    await streamFile(downloadUrl, fileName, res);
+    await handleDownloadRedirect(downloadUrl, res);
 
   } catch (error) {
     console.error('[DOWNLOAD STREAM] Security failure:', error);
@@ -451,7 +431,7 @@ router.get('/file/free/:productId/:index', async (req, res) => {
       fileName = downloadUrl.split('/').pop() || 'free-package.zip';
     }
 
-    await streamFile(downloadUrl, fileName, res);
+    await handleDownloadRedirect(downloadUrl, res);
 
   } catch (error) {
     console.error('[FREE DOWNLOAD STREAM] failed:', error);
