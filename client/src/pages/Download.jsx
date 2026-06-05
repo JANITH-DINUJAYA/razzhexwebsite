@@ -58,19 +58,8 @@ function DownloadPage() {
       
       const downloadUrl = `/api/downloads/file?token=${encodeURIComponent(sessionToken)}&index=${file.index}`;
       
-      if (file.isPage) {
-        // Open web page (Mega) in new tab
-        window.open(downloadUrl, '_blank');
-      } else {
-        // Direct file download using hidden iframe (stops blank tab from hanging open)
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = downloadUrl;
-        document.body.appendChild(iframe);
-        setTimeout(() => {
-          document.body.removeChild(iframe);
-        }, 5000);
-      }
+      // Open in a new tab so the secure loader page handles the redirect/close
+      window.open(downloadUrl, '_blank');
       
       // Reset button state after a short delay
       setTimeout(() => {

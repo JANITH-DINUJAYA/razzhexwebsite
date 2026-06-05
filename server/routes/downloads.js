@@ -60,6 +60,88 @@ async function getGoogleDriveStream(fileId) {
   return response;
 }
 
+// Render transition page to safely redirect and trigger native downloads in a new tab
+function renderDownloadPage(directUrl, res) {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Razz Hex - Secure Download</title>
+  <meta charset="utf-8">
+  <style>
+    body {
+      background-color: #09090e;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      max-width: 400px;
+    }
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #00f2fe;
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px auto;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin: 0 0 12px 0;
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      color: #a0aec0;
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <h2>Establishing Secure Stream</h2>
+    <p>Please wait while your files are retrieved securely...</p>
+  </div>
+  <script>
+    setTimeout(function() {
+      window.location.href = ${JSON.stringify(directUrl)};
+      // Try to close tab after 8 seconds if it's a direct file download
+      setTimeout(function() {
+        try {
+          window.close();
+        } catch(e) {}
+      }, 8000);
+    }, 1500);
+  </script>
+</body>
+</html>
+`;
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+}
+
 // Securely redirect to direct download URL (handles Google Drive, Dropbox, Firebase Storage, and Mega)
 async function handleDownloadRedirect(downloadUrl, res) {
   try {
@@ -68,25 +150,25 @@ async function handleDownloadRedirect(downloadUrl, res) {
     if (isExternal) {
       if (downloadUrl.includes('mega.nz')) {
         console.log(`[REDIRECT] Mega URL detected, redirecting: ${downloadUrl}`);
-        return res.redirect(downloadUrl);
+        return renderDownloadPage(downloadUrl, res);
       }
       
       const directUrl = getDirectDownloadUrl(downloadUrl);
       console.log(`[REDIRECT] Redirecting to direct URL: ${directUrl}`);
-      return res.redirect(directUrl);
+      return renderDownloadPage(directUrl, res);
     } else {
       if (!isConfigured) {
         console.log(`[REDIRECT BYPASS] Backend offline. Redirecting to dummy mock zip file.`);
-        return res.redirect('https://file-examples.com/wp-content/uploads/2017/02/zip_2MB.zip');
+        return renderDownloadPage('https://file-examples.com/wp-content/uploads/2017/02/zip_2MB.zip', res);
       }
 
       console.log(`[REDIRECT] Generating signed URL for Firebase Storage: ${downloadUrl}`);
       const signedUrl = await generateSignedUrl(downloadUrl, 15);
-      return res.redirect(signedUrl);
+      return renderDownloadPage(signedUrl, res);
     }
   } catch (error) {
     console.error('[REDIRECT ERROR] Redirect failed:', error);
-    return res.redirect(downloadUrl);
+    return renderDownloadPage(downloadUrl, res);
   }
 }
 
