@@ -32,8 +32,15 @@ function ProductCard({ product }) {
     try {
       setDownloading(true);
       
-      // Trigger secure free streaming download route directly
-      window.open(`/api/downloads/file/free/${id}/0`, '_blank');
+      // Trigger secure free streaming download route directly via hidden iframe
+      const downloadUrl = `/api/downloads/file/free/${id}/0`;
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = downloadUrl;
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 5000);
       
       setTimeout(() => {
         setDownloading(false);

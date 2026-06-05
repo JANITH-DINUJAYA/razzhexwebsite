@@ -51,13 +51,26 @@ function DownloadPage() {
     fetchDetails();
   }, [productId, navigate]);
 
-  const handleDownload = (index) => {
+  const handleDownload = (file) => {
     try {
-      setDownloadingIndex(index);
+      setDownloadingIndex(file.index);
       setError('');
       
-      // Trigger download securely using dynamic stream window trigger
-      window.open(`/api/downloads/file?token=${encodeURIComponent(sessionToken)}&index=${index}`, '_blank');
+      const downloadUrl = `/api/downloads/file?token=${encodeURIComponent(sessionToken)}&index=${file.index}`;
+      
+      if (file.isPage) {
+        // Open web page (Mega) in new tab
+        window.open(downloadUrl, '_blank');
+      } else {
+        // Direct file download using hidden iframe (stops blank tab from hanging open)
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = downloadUrl;
+        document.body.appendChild(iframe);
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 5000);
+      }
       
       // Reset button state after a short delay
       setTimeout(() => {
@@ -139,7 +152,7 @@ function DownloadPage() {
                     key={file.index}
                     className="btn btn-primary btn-lg"
                     disabled={downloadingIndex !== null}
-                    onClick={() => handleDownload(file.index)}
+                    onClick={() => handleDownload(file)}
                     style={{ width: '100%' }}
                   >
                     {downloadingIndex === file.index ? (
@@ -157,7 +170,7 @@ function DownloadPage() {
                 <button
                   className="btn btn-primary btn-lg"
                   disabled={downloadingIndex !== null}
-                  onClick={() => handleDownload(0)}
+                  onClick={() => handleDownload({ index: 0, isPage: false })}
                   style={{ width: '100%' }}
                 >
                   {downloadingIndex === 0 ? (

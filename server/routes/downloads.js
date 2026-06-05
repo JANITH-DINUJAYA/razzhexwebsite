@@ -247,7 +247,7 @@ router.post('/info', async (req, res) => {
 
     if (!isConfigured) {
       let productName = 'Premium Mock Panel';
-      let files = [{ name: 'Main Download', index: 0 }];
+      let files = [{ name: 'Main Download', index: 0, isPage: false }];
       if (productId === '1') {
         productName = 'Android RAT Panel';
       } else if (productId === '3') {
@@ -267,12 +267,18 @@ router.post('/info', async (req, res) => {
     
     let files = [];
     if (product.filePaths && product.filePaths.length > 0) {
-      files = product.filePaths.map((f, idx) => ({
-        name: f.name || `Download Mirror ${idx + 1}`,
-        index: idx
-      }));
+      files = product.filePaths.map((f, idx) => {
+        const path = f.path || '';
+        const isPage = path.includes('mega.nz');
+        return {
+          name: f.name || `Download Mirror ${idx + 1}`,
+          index: idx,
+          isPage
+        };
+      });
     } else if (product.filePath) {
-      files = [{ name: 'Main Download', index: 0 }];
+      const isPage = product.filePath.includes('mega.nz');
+      files = [{ name: 'Main Download', index: 0, isPage }];
     }
 
     res.status(200).json({
