@@ -10,9 +10,10 @@ function DownloadPage() {
   const [sessionToken, setSessionToken] = useState('');
   const [licenseKey, setLicenseKey] = useState('');
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
+  const [downloadingIndex, setDownloadingIndex] = useState(null);
   const [error, setError] = useState('');
   const [productName, setProductName] = useState('Secure Digital Package');
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
     const token = sessionStorage.getItem('razz_hex_session');
@@ -32,17 +33,16 @@ function DownloadPage() {
     setSessionToken(token);
     setLicenseKey(key);
     
-    // Attempt to extract product name from API or fallback
+    // Attempt to extract product details and file list from API
     async function fetchDetails() {
       try {
-        const products = await api.getProducts();
-        const prod = products.find(p => p.id === productId);
-        if (prod) {
-          setProductName(prod.name);
-        }
+        const info = await api.getDownloadInfo(token);
+        setProductName(info.productName || 'Authorized Premium Package');
+        setFiles(info.files || []);
       } catch (err) {
         // Fallback
         setProductName('Authorized Premium Package');
+        setFiles([{ name: 'Main Download', index: 0 }]);
       } finally {
         setLoading(false);
       }
@@ -51,36 +51,21 @@ function DownloadPage() {
     fetchDetails();
   }, [productId, navigate]);
 
-  const handleDownload = async () => {
+  const handleDownload = (index) => {
     try {
-      setDownloading(true);
+      setDownloadingIndex(index);
       setError('');
       
-      const response = await api.generateDownloadUrl(sessionToken);
+      // Trigger download securely using dynamic stream window trigger
+      window.open(`/api/downloads/file?token=${encodeURIComponent(sessionToken)}&index=${index}`, '_blank');
       
-      // We have the download URL!
-      if (response.downloadUrl) {
-        const isExternal = response.downloadUrl.startsWith('http') && !response.downloadUrl.includes('firebasestorage');
-        
-        if (isExternal) {
-          // Open external links (like Google Drive) in a new tab for smooth user experience
-          window.open(response.downloadUrl, '_blank');
-        } else {
-          // Create an anchor tag and click it to trigger native saving for direct files
-          const link = document.createElement('a');
-          link.href = response.downloadUrl;
-          link.setAttribute('download', response.fileName || 'razz-package.zip');
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      } else {
-        throw new Error('Download target was empty.');
-      }
+      // Reset button state after a short delay
+      setTimeout(() => {
+        setDownloadingIndex(null);
+      }, 3000);
     } catch (err) {
-      setError(err.message || 'Failed to request signed download link.');
-    } finally {
-      setDownloading(false);
+      setError(err.message || 'Failed to request download.');
+      setDownloadingIndex(null);
     }
   };
 
@@ -148,22 +133,44 @@ function DownloadPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                className="btn btn-primary btn-lg"
-                disabled={downloading}
-                onClick={handleDownload}
-                style={{ width: '100%' }}
-              >
-                {downloading ? (
-                  <>
-                    <RefreshCw className="spinner" size={18} /> Resolving Package...
-                  </>
-                ) : (
-                  <>
-                    <Download size={18} /> Download Now
-                  </>
-                )}
-              </button>
+              {files.length > 0 ? (
+                files.map((file) => (
+                  <button
+                    key={file.index}
+                    className="btn btn-primary btn-lg"
+                    disabled={downloadingIndex !== null}
+                    onClick={() => handleDownload(file.index)}
+                    style={{ width: '100%' }}
+                  >
+                    {downloadingIndex === file.index ? (
+                      <>
+                        <RefreshCw className="spinner" size={18} /> Resolving Package...
+                      </>
+                    ) : (
+                      <>
+                        <Download size={18} /> {files.length > 1 ? `Download: ${file.name}` : 'Download Now'}
+                      </>
+                    )}
+                  </button>
+                ))
+              ) : (
+                <button
+                  className="btn btn-primary btn-lg"
+                  disabled={downloadingIndex !== null}
+                  onClick={() => handleDownload(0)}
+                  style={{ width: '100%' }}
+                >
+                  {downloadingIndex === 0 ? (
+                    <>
+                      <RefreshCw className="spinner" size={18} /> Resolving Package...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={18} /> Download Now
+                    </>
+                  )}
+                </button>
+              )}
 
               <button className="btn btn-ghost btn-sm" onClick={handleResetSession}>
                 Revoke Session &amp; Lock Portal

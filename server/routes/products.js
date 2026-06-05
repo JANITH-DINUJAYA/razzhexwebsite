@@ -16,8 +16,14 @@ const MOCK_PRODUCTS = [
   { id: '6', name: 'PC Network Monitor', description: 'Real-time PC network interface analyzer with packet capture, bandwidth graphs, and suspicious IP triggers.', price: 39, category: 'PC Panel', imageUrl: null, filePath: '', active: true }
 ];
 
+// Helper to ensure filePaths is populated for legacy support
+const sanitizeProduct = (p) => {
+  const filePaths = p.filePaths || (p.filePath ? [{ name: 'Main Download', path: p.filePath }] : []);
+  return { ...p, filePaths };
+};
+
 // Memory catalog storage for offline local sandbox testing
-let localProducts = [...MOCK_PRODUCTS];
+let localProducts = [...MOCK_PRODUCTS].map(sanitizeProduct);
 
 // 1. GET /api/products — Fetch active catalog products
 router.get('/', async (req, res) => {
@@ -49,7 +55,7 @@ router.get('/', async (req, res) => {
 
     const list = [];
     snapshot.forEach(doc => {
-      list.push({ id: doc.id, ...doc.data() });
+      list.push(sanitizeProduct({ id: doc.id, ...doc.data() }));
     });
 
     list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -63,10 +69,18 @@ router.get('/', async (req, res) => {
 
 // 2. POST /api/products — Create new product record (Admin privilege)
 router.post('/', verifyAdmin, async (req, res) => {
-  const { name, description, category, price, filePath, active, imageUrl } = req.body;
+  const { name, description, category, price, filePath, active, imageUrl, filePaths } = req.body;
 
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'Name and price are required parameters.' });
+  }
+
+  let finalFilePaths = filePaths || [];
+  let finalFilePath = filePath || '';
+  if (filePaths && filePaths.length > 0) {
+    finalFilePath = filePaths[0].path || '';
+  } else if (filePath) {
+    finalFilePaths = [{ name: 'Main Download', path: filePath }];
   }
 
   const payload = {
@@ -74,14 +88,15 @@ router.post('/', verifyAdmin, async (req, res) => {
     description: description || '',
     category: category || 'Android Panel',
     price: Number(price),
-    filePath: filePath || '',
+    filePath: finalFilePath,
+    filePaths: finalFilePaths,
     imageUrl: imageUrl || null,
     active: active !== undefined ? active : true,
     updatedAt: new Date().toISOString()
   };
 
   if (!isConfigured) {
-    const localNew = { id: Math.random().toString(36).substring(2, 9), ...payload, createdAt: new Date().toISOString() };
+    const localNew = sanitizeProduct({ id: Math.random().toString(36).substring(2, 9), ...payload, createdAt: new Date().toISOString() });
     localProducts.unshift(localNew);
     return res.status(201).json(localNew);
   }
@@ -89,7 +104,7 @@ router.post('/', verifyAdmin, async (req, res) => {
   try {
     payload.createdAt = new Date().toISOString();
     const docRef = await db.collection('products').add(payload);
-    res.status(201).json({ id: docRef.id, ...payload });
+    res.status(201).json(sanitizeProduct({ id: docRef.id, ...payload }));
   } catch (error) {
     console.error('[PRODUCTS] Create error:', error);
     res.status(500).json({ error: 'Failed to create product database entry.' });
@@ -98,16 +113,13 @@ router.post('/', verifyAdmin, async (req, res) => {
 
 // 3. PUT /api/products/:id — Modify product record (Admin privilege)
 //
-// filePath update behaviour:
-//   - If the request body includes a "filePath" key (even an empty string),
-//     the value is written to Firestore — the admin explicitly wants to change it.
-//   - If the request body does NOT include "filePath" at all (key is undefined),
-//     the field is left untouched in Firestore — preserving the existing link.
-//
-// The frontend only sends "filePath" when the admin toggles "Updating link" in the UI.
+// filePath/filePaths update behaviour:
+//   - If the request body includes "filePaths" key (even an empty array),
+//     the value is written to Firestore and filePath is synced to filePaths[0].path.
+//   - If "filePaths" is not provided but "filePath" is, filePaths is synced to [{ name: 'Main Download', path: filePath }].
 router.put('/:id', verifyAdmin, async (req, res) => {
   const { id } = req.params;
-  const { name, description, category, price, filePath, active, imageUrl } = req.body;
+  const { name, description, category, price, filePath, active, imageUrl, filePaths } = req.body;
 
   // Build payload with only the fields that were actually sent
   const payload = {
@@ -121,19 +133,22 @@ router.put('/:id', verifyAdmin, async (req, res) => {
   if (active !== undefined)      payload.active      = active;
   if (imageUrl !== undefined)    payload.imageUrl    = imageUrl || null;
 
-  // filePath is only added to the payload when the frontend explicitly sends it.
-  // This prevents accidental erasure when the admin saves without touching the link field.
-  if (filePath !== undefined) {
-    payload.filePath = filePath; // could be '' if admin intentionally cleared it
-    console.log(`[PRODUCTS] filePath update requested for product ${id}: "${filePath}"`);
+  if (filePaths !== undefined) {
+    payload.filePaths = filePaths;
+    payload.filePath = filePaths.length > 0 ? (filePaths[0].path || '') : '';
+    console.log(`[PRODUCTS] filePaths update requested for product ${id}:`, filePaths);
+  } else if (filePath !== undefined) {
+    payload.filePath = filePath;
+    payload.filePaths = filePath ? [{ name: 'Main Download', path: filePath }] : [];
+    console.log(`[PRODUCTS] legacy filePath update requested for product ${id}: "${filePath}"`);
   } else {
-    console.log(`[PRODUCTS] filePath NOT in request for product ${id} — preserving existing value.`);
+    console.log(`[PRODUCTS] filePath/filePaths NOT in request for product ${id} — preserving existing values.`);
   }
 
   if (!isConfigured) {
     const idx = localProducts.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ error: 'Product profile not found.' });
-    localProducts[idx] = { ...localProducts[idx], ...payload };
+    localProducts[idx] = sanitizeProduct({ ...localProducts[idx], ...payload });
     return res.status(200).json(localProducts[idx]);
   }
 
@@ -144,10 +159,8 @@ router.put('/:id', verifyAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Product profile not found.' });
     }
 
-    // Firestore .update() only touches fields present in payload — existing
-    // fields not in payload (including filePath when not sent) are untouched.
     await docRef.update(payload);
-    res.status(200).json({ id, ...payload });
+    res.status(200).json(sanitizeProduct({ id, ...payload }));
   } catch (error) {
     console.error('[PRODUCTS] Update error:', error);
     res.status(500).json({ error: 'Failed to update product details.' });

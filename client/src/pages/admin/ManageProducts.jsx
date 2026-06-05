@@ -18,6 +18,7 @@ function ManageProducts() {
     category: 'Android Panel',
     price: '',
     filePath: '',
+    filePaths: [],
     imageUrl: '',
     active: true
   });
@@ -63,6 +64,7 @@ function ManageProducts() {
       category: 'Android Panel',
       price: '',
       filePath: '',
+      filePaths: [],
       imageUrl: '',
       active: true
     });
@@ -72,18 +74,49 @@ function ManageProducts() {
 
   const openEditModal = (product) => {
     setEditProduct(product);
-    setUpdateFilePath(false); // Default: preserve existing filePath
+    setUpdateFilePath(false); // Default: preserve existing links
+    
+    let initialLinks = [];
+    if (product.filePaths && product.filePaths.length > 0) {
+      initialLinks = product.filePaths.map(link => ({ ...link }));
+    } else if (product.filePath) {
+      initialLinks = [{ name: 'Main Download', path: product.filePath }];
+    }
+
     setFormData({
       name: product.name,
       description: product.description || '',
       category: product.category,
       price: product.price,
       filePath: product.filePath || '',
+      filePaths: initialLinks,
       imageUrl: product.imageUrl || '',
       active: product.active !== undefined ? product.active : true
     });
     setErrorMessage('');
     setModalOpen(true);
+  };
+
+  const handleAddLink = () => {
+    setFormData(prev => ({
+      ...prev,
+      filePaths: [...prev.filePaths, { name: '', path: '' }]
+    }));
+  };
+
+  const handleLinkChange = (index, field, value) => {
+    setFormData(prev => {
+      const updated = [...prev.filePaths];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, filePaths: updated };
+    });
+  };
+
+  const handleRemoveLink = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      filePaths: prev.filePaths.filter((_, i) => i !== index)
+    }));
   };
 
   const handleInputChange = (e) => {
@@ -103,10 +136,12 @@ function ManageProducts() {
       return;
     }
 
+    // Filter out empty links
+    const filteredFilePaths = formData.filePaths.filter(link => link.path.trim() !== '');
+
     try {
       if (editProduct) {
         // Build the update payload
-        // Only include filePath in the payload if admin explicitly opted to update it
         const updatePayload = {
           name: formData.name,
           description: formData.description,
@@ -117,10 +152,9 @@ function ManageProducts() {
         };
 
         if (updateFilePath) {
-          // Admin wants to update the link (even if they set it to empty to clear it)
-          updatePayload.filePath = formData.filePath;
+          updatePayload.filePaths = filteredFilePaths;
+          updatePayload.filePath = filteredFilePaths[0]?.path || '';
         }
-        // If updateFilePath is false, filePath is NOT sent → backend preserves existing value
 
         try {
           await api.adminUpdateProduct(token, editProduct.id, updatePayload);
@@ -134,16 +168,19 @@ function ManageProducts() {
               ? {
                   ...p,
                   ...updatePayload,
-                  // Keep the old filePath locally if we didn't update it
-                  filePath: updateFilePath ? formData.filePath : p.filePath
+                  // Keep the old values locally if we didn't update them
+                  filePath: updateFilePath ? (filteredFilePaths[0]?.path || '') : p.filePath,
+                  filePaths: updateFilePath ? filteredFilePaths : p.filePaths
                 }
               : p
           )
         );
       } else {
-        // Create flow — filePath is always included for new products
+        // Create flow
         const newProductData = {
           ...formData,
+          filePaths: filteredFilePaths,
+          filePath: filteredFilePaths[0]?.path || '',
           price: Number(formData.price)
         };
 
@@ -232,7 +269,21 @@ function ManageProducts() {
                   </td>
                   <td style={{ fontFamily: 'var(--font-mono)' }}>Rs. {product.price}</td>
                   <td>
-                    {product.filePath ? (
+                    {product.filePaths && product.filePaths.length > 1 ? (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: 'var(--neon-blue)',
+                          fontSize: '0.75rem',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <Link size={12} />
+                        {product.filePaths.length} Mirrors
+                      </span>
+                    ) : product.filePath ? (
                       <span
                         style={{
                           display: 'inline-flex',
@@ -345,7 +396,7 @@ function ManageProducts() {
                 <div className="form-group">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <label className="form-label" style={{ margin: 0 }}>
-                      Product File Path or Google Drive Link
+                      Product Download Mirrors
                     </label>
 
                     {/* Only show the toggle when editing an existing product */}
@@ -363,51 +414,96 @@ function ManageProducts() {
                         onClick={() => setUpdateFilePath(v => !v)}
                       >
                         <RotateCcw size={12} />
-                        {updateFilePath ? 'Updating link' : 'Keep existing link'}
+                        {updateFilePath ? 'Updating links' : 'Keep existing links'}
                       </div>
                     )}
                   </div>
 
                   {editProduct && !updateFilePath ? (
-                    // Read-only display of current link when not updating
-                    <div
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '6px',
-                        background: 'var(--bg-muted, rgba(255,255,255,0.04))',
-                        border: '1px solid var(--border-subtle)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '0.8rem',
-                        color: 'var(--text-muted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <Link size={13} style={{ flexShrink: 0, opacity: 0.5 }} />
-                      <span style={{ wordBreak: 'break-all' }}>
-                        {editProduct.filePath || 'No file link saved'}
-                      </span>
+                    // Read-only display of current links when not updating
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {((editProduct.filePaths && editProduct.filePaths.length > 0)
+                        ? editProduct.filePaths
+                        : (editProduct.filePath ? [{ name: 'Main Download', path: editProduct.filePath }] : [])
+                      ).map((link, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            background: 'var(--bg-muted, rgba(255,255,255,0.04))',
+                            border: '1px solid var(--border-subtle)',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.8rem',
+                            color: 'var(--text-muted)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <Link size={13} style={{ flexShrink: 0, opacity: 0.5 }} />
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)', marginRight: '8px', flexShrink: 0 }}>
+                            {link.name}:
+                          </span>
+                          <span style={{ wordBreak: 'break-all' }}>
+                            {link.path}
+                          </span>
+                        </div>
+                      ))}
+                      {(!editProduct.filePath && (!editProduct.filePaths || editProduct.filePaths.length === 0)) && (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                          No file links saved
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    // Editable input — always shown for new products, toggled for edits
-                    <>
-                      <input
-                        type="text"
-                        name="filePath"
-                        className="form-input font-mono"
-                        value={formData.filePath}
-                        onChange={handleInputChange}
-                        placeholder="e.g. https://drive.google.com/file/d/... or products/files/panel.zip"
-                        autoFocus={editProduct && updateFilePath}
-                      />
+                    // Dynamic Editable input list manager — shown for new products and toggled edits
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {formData.filePaths.map((link, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            className="form-input"
+                            style={{ width: '30%', fontSize: '0.85rem' }}
+                            placeholder="e.g. Google Drive Mirror"
+                            value={link.name}
+                            onChange={(e) => handleLinkChange(idx, 'name', e.target.value)}
+                            required
+                          />
+                          <input
+                            type="text"
+                            className="form-input font-mono"
+                            style={{ flexGrow: 1, fontSize: '0.85rem' }}
+                            placeholder="https://drive.google.com/file/d/..."
+                            value={link.path}
+                            onChange={(e) => handleLinkChange(idx, 'path', e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => handleRemoveLink(idx)}
+                            style={{ padding: '6px', height: '34px', width: '34px', minWidth: '34px' }}
+                            title="Remove Link"
+                          >
+                            <Trash2 size={14} className="text-error" />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleAddLink}
+                        style={{ alignSelf: 'flex-start', marginTop: '4px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Plus size={14} /> Add Download Link
+                      </button>
+                      
                       <span className="form-help">
-                        Enter a full Google Drive URL, external download link, or secure Firebase Storage path.
-                        {editProduct && (
-                          <> The previous link will be <strong>replaced</strong> once you save.</>
-                        )}
+                        Provide one or more download links (Google Drive URL, Mega, Dropbox, or secure Firebase path).
                       </span>
-                    </>
+                    </div>
                   )}
                 </div>
                 {/* ─── END FILE PATH SECTION ─── */}

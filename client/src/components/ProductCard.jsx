@@ -31,27 +31,16 @@ function ProductCard({ product }) {
   const handleDownloadFree = async () => {
     try {
       setDownloading(true);
-      const res = await api.getFreeDownloadUrl(id);
-      if (res.downloadUrl) {
-        const isExternal = res.downloadUrl.startsWith('http') && !res.downloadUrl.includes('firebasestorage');
-        
-        if (isExternal) {
-          window.open(res.downloadUrl, '_blank');
-        } else {
-          const link = document.createElement('a');
-          link.href = res.downloadUrl;
-          link.setAttribute('download', res.fileName || `${name}.zip`);
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      } else {
-        throw new Error('Download target is empty.');
-      }
+      
+      // Trigger secure free streaming download route directly
+      window.open(`/api/downloads/file/free/${id}/0`, '_blank');
+      
+      setTimeout(() => {
+        setDownloading(false);
+      }, 3000);
     } catch (err) {
       console.error('Download error:', err);
-      alert(err.message || 'Failed to download free panel file.');
-    } finally {
+      alert('Failed to download free panel file.');
       setDownloading(false);
     }
   };

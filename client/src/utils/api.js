@@ -49,6 +49,16 @@ export const api = {
     });
   },
 
+  // Retrieve product name and safe list of mirrors (names and indices only)
+  getDownloadInfo: async (sessionToken) => {
+    return request('/api/downloads/info', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sessionToken}`,
+      },
+    });
+  },
+
   // Get free download url
   getFreeDownloadUrl: async (productId) => {
     return request(`/api/downloads/free/${productId}`);
